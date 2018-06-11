@@ -16,7 +16,7 @@
 
 #define LOG_TAG "audio_hw_voice"
 #define LOG_NDEBUG 0
-/*#define VERY_VERY_VERBOSE_LOGGING*/
+#define VERY_VERY_VERBOSE_LOGGING
 #ifdef VERY_VERY_VERBOSE_LOGGING
 #define ALOGVV ALOGV
 #else
@@ -34,8 +34,14 @@
 #include "audio_hw.h"
 #include "voice.h"
 
-#ifdef AUDIENCE_EARSMART_IC
 #include "audience.h"
+
+#ifndef AUDIENCE_SUPPORTED
+  #ifdef AUDIENCE_EARSMART_IC
+    #define AUDIENCE_SUPPORTED()  (true)
+  #else
+    #define AUDIENCE_SUPPORTED()  (false)
+  #endif
 #endif
 
 /**
@@ -282,10 +288,10 @@ int start_voice_session(struct voice_session *session)
         start_voice_session_bt_sco(session);
     }
 
-#ifdef AUDIENCE_EARSMART_IC
-    ALOGV("%s: Enabling Audience IC", __func__);
-    es_start_voice_session(session);
-#endif
+    if (AUDIENCE_SUPPORTED()) {
+        ALOGV("%s: Enabling Audience IC", __func__);
+        es_start_voice_session(session);
+    }
 
     if (session->two_mic_control) {
         ALOGV("%s: enabling two mic control", __func__);
@@ -295,7 +301,9 @@ int start_voice_session(struct voice_session *session)
         ril_set_two_mic_control(&session->ril, AUDIENCE, TWO_MIC_SOLUTION_OFF);
     }
 
+#ifndef DISABLE_CALL_CLOCK_SYNC
     ril_set_call_clock_sync(&session->ril, SOUND_CLOCK_START);
+#endif
 
     return 0;
 }
@@ -328,10 +336,10 @@ void stop_voice_session(struct voice_session *session)
         stop_voice_session_bt_sco(session);
     }
 
-#ifdef AUDIENCE_EARSMART_IC
-    ALOGV("%s: Disabling Audience IC", __func__);
-    es_stop_voice_session();
-#endif
+    if (AUDIENCE_SUPPORTED()) {
+        ALOGV("%s: Disabling Audience IC", __func__);
+        es_stop_voice_session();
+    }
 
     session->out_device = AUDIO_DEVICE_NONE;
 
