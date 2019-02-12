@@ -44,7 +44,8 @@ class SunlightEnhancement : public ISunlightEnhancement {
     Return<bool> setEnabled(bool enabled) override;
 
     // Methods from ::android::hidl::base::V1_0::IBase follow.
-
+  private:
+    bool mHasHBM = false;
 };
 
 }  // namespace samsung

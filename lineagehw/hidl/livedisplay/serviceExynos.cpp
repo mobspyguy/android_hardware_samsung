@@ -15,9 +15,9 @@
  */
 
 #ifdef LIVES_IN_SYSTEM
-#define LOG_TAG "lineage.livedisplay@2.0-service.samsung-qcom"
+#define LOG_TAG "lineage.livedisplay@2.0-service.samsung-exynos"
 #else
-#define LOG_TAG "vendor.lineage.livedisplay@2.0-service.samsung-qcom"
+#define LOG_TAG "vendor.lineage.livedisplay@2.0-service.samsung-exynos"
 #endif
 
 #include <android-base/logging.h>
@@ -25,9 +25,10 @@
 #include <hidl/HidlTransportSupport.h>
 
 #include "AdaptiveBacklight.h"
+#include "DisplayColorCalibrationExynos.h"
 #include "DisplayModes.h"
 #include "ReadingEnhancement.h"
-#include "SunlightEnhancement.h"
+#include "SunlightEnhancementExynos.h"
 
 using android::hardware::configureRpcThreadpool;
 using android::hardware::joinRpcThreadpool;
@@ -36,15 +37,17 @@ using android::status_t;
 using android::OK;
 
 using vendor::lineage::livedisplay::V2_0::samsung::AdaptiveBacklight;
+using vendor::lineage::livedisplay::V2_0::samsung::DisplayColorCalibrationExynos;
 using vendor::lineage::livedisplay::V2_0::samsung::DisplayModes;
 using vendor::lineage::livedisplay::V2_0::samsung::ReadingEnhancement;
-using vendor::lineage::livedisplay::V2_0::samsung::SunlightEnhancement;
+using vendor::lineage::livedisplay::V2_0::samsung::SunlightEnhancementExynos;
 
 int main() {
     sp<AdaptiveBacklight> adaptiveBacklight;
+    sp<DisplayColorCalibrationExynos> displayColorCalibrationExynos;
     sp<DisplayModes> displayModes;
     sp<ReadingEnhancement> readingEnhancement;
-    sp<SunlightEnhancement> sunlightEnhancement;
+    sp<SunlightEnhancementExynos> sunlightEnhancementExynos;
     status_t status;
 
     LOG(INFO) << "LiveDisplay HAL service is starting.";
@@ -52,6 +55,12 @@ int main() {
     adaptiveBacklight = new AdaptiveBacklight();
     if (adaptiveBacklight == nullptr) {
         LOG(ERROR) << "Can not create an instance of LiveDisplay HAL AdaptiveBacklight Iface, exiting.";
+        goto shutdown;
+    }
+
+    displayColorCalibrationExynos = new DisplayColorCalibrationExynos();
+    if (displayColorCalibrationExynos == nullptr) {
+        LOG(ERROR) << "Can not create an instance of LiveDisplay HAL DisplayColorCalibration Iface, exiting.";
         goto shutdown;
     }
 
@@ -67,8 +76,8 @@ int main() {
         goto shutdown;
     }
 
-    sunlightEnhancement = new SunlightEnhancement();
-    if (sunlightEnhancement == nullptr) {
+    sunlightEnhancementExynos = new SunlightEnhancementExynos();
+    if (sunlightEnhancementExynos == nullptr) {
         LOG(ERROR) << "Can not create an instance of LiveDisplay HAL SunlightEnhancement Iface, exiting.";
         goto shutdown;
     }
@@ -80,6 +89,16 @@ int main() {
         if (status != OK) {
             LOG(ERROR)
                 << "Could not register service for LiveDisplay HAL AdaptiveBacklight Iface ("
+                << status << ")";
+            goto shutdown;
+        }
+    }
+
+    if (displayColorCalibrationExynos->isSupported()) {
+        status = displayColorCalibrationExynos->registerAsService();
+        if (status != OK) {
+            LOG(ERROR)
+                << "Could not register service for LiveDisplay HAL DisplayColorCalibration Iface ("
                 << status << ")";
             goto shutdown;
         }
@@ -105,8 +124,8 @@ int main() {
         }
     }
 
-    if (sunlightEnhancement->isSupported()) {
-        status = sunlightEnhancement->registerAsService();
+    if (sunlightEnhancementExynos->isSupported()) {
+        status = sunlightEnhancementExynos->registerAsService();
         if (status != OK) {
             LOG(ERROR)
                 << "Could not register service for LiveDisplay HAL SunlightEnhancement Iface ("

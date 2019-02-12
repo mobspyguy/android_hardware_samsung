@@ -14,9 +14,17 @@
  * limitations under the License.
  */
 
+#include <android-base/file.h>
+#include <android-base/strings.h>
+
 #include <fstream>
 
 #include "SunlightEnhancementExynos.h"
+
+
+using android::base::ReadFileToString;
+using android::base::Trim;
+using android::base::WriteStringToFile;
 
 namespace vendor {
 namespace lineage {
@@ -24,32 +32,29 @@ namespace livedisplay {
 namespace V2_0 {
 namespace samsung {
 
+static constexpr const char *kLUXPath = "/sys/class/mdnie/mdnie/lux";
+
 // Methods from ::vendor::lineage::livedisplay::V2_0::ISunlightEnhancement follow.
 bool SunlightEnhancementExynos::isSupported() {
-    std::ofstream file("/sys/class/mdnie/mdnie/lux");
+    std::fstream file(kLUXPath, file.in | file.out);
     return file.good();
 }
 
 // Methods from ::vendor::lineage::livedisplay::V2_0::IAdaptiveBacklight follow.
 Return<bool> SunlightEnhancementExynos::isEnabled() {
-    std::ifstream file("/sys/class/mdnie/mdnie/lux");
-    int status = -1;
+    std::string tmp;
+    int32_t contents = 0;
 
-    if (file.is_open()) {
-        file >> status;
+    if (ReadFileToString(kLUXPath, &tmp)) {
+        contents = std::stoi(Trim(tmp));
     }
 
-    return file.good() && status > 0;
+    return contents > 0;
 }
 
 Return<bool> SunlightEnhancementExynos::setEnabled(bool enabled) {
-    std::ofstream file("/sys/class/mdnie/mdnie/lux");
-    if (file.is_open()) {
-        /* see drivers/video/fbdev/exynos/decon_7880/panels/mdnie_lite_table*, get_hbm_index */
-        file << (enabled ? "40000" : "0");
-    }
-
-    return true;
+    /* see drivers/video/fbdev/exynos/decon_7880/panels/mdnie_lite_table*, get_hbm_index */
+    return WriteStringToFile(enabled ? "40000" : "0", kLUXPath, true);
 }
 
 }  // namespace samsung

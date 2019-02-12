@@ -14,9 +14,17 @@
  * limitations under the License.
  */
 
+#include <android-base/file.h>
+#include <android-base/strings.h>
+
 #include <fstream>
 
 #include "DisplayColorCalibrationExynos.h"
+
+using android::base::ReadFileToString;
+using android::base::Split;
+using android::base::Trim;
+using android::base::WriteStringToFile;
 
 namespace vendor {
 namespace lineage {
@@ -27,8 +35,8 @@ namespace samsung {
 static constexpr const char *kColorPath = "/sys/class/mdnie/mdnie/sensorRGB";
 
 bool DisplayColorCalibrationExynos::isSupported() {
-    std::ofstream file(kColorPath);
-    return file.good();
+    std::fstream rgb(kColorPath, rgb.in | rgb.out);
+    return rgb.good();
 }
 
 Return<int32_t> DisplayColorCalibrationExynos::getMaxValue() {
@@ -40,27 +48,26 @@ Return<int32_t> DisplayColorCalibrationExynos::getMinValue() {
 }
 
 Return<void> DisplayColorCalibrationExynos::getCalibration(getCalibration_cb resultCb) {
-    std::ifstream file(kColorPath);
-    int r, g, b;
+    std::vector<int32_t> rgb;
+    std::string tmp;
 
-    file >> r >> g >> b;
-    if (file.fail()) {
-        resultCb(std::vector<int32_t>());
-    } else {
-        resultCb(std::vector<int32_t>({ r, g, b }));
+    if (ReadFileToString(kColorPath, &tmp)) {
+        std::vector<std::string> colors = Split(Trim(tmp), " ");
+        for (const std::string& color : colors) {
+            rgb.push_back(std::stoi(color));
+        }
     }
 
+    resultCb(rgb);
     return Void();
 }
 
 Return<bool> DisplayColorCalibrationExynos::setCalibration(const hidl_vec<int32_t>& rgb) {
-    std::ofstream file(kColorPath);
-    if (rgb.size() != 3) {
-        return false;
+    std::string contents;
+    for (const int32_t& color : rgb) {
+        contents += std::to_string(color) + " ";
     }
-
-    file << rgb[0] << " " << rgb[1] << " "  << rgb[2];
-    return !file.fail();
+    return WriteStringToFile(Trim(contents), kColorPath, true);
 }
 
 }  // namespace samsung

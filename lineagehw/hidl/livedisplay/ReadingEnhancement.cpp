@@ -14,9 +14,16 @@
  * limitations under the License.
  */
 
+#include <android-base/file.h>
+#include <android-base/strings.h>
+
 #include <fstream>
 
 #include "ReadingEnhancement.h"
+
+using android::base::ReadFileToString;
+using android::base::Trim;
+using android::base::WriteStringToFile;
 
 namespace vendor {
 namespace lineage {
@@ -24,31 +31,27 @@ namespace livedisplay {
 namespace V2_0 {
 namespace samsung {
 
+static constexpr const char *kREPath = "/sys/class/mdnie/mdnie/accessibility";
+
 // Methods from ::vendor::lineage::livedisplay::V2_0::ISunlightEnhancement follow.
 bool ReadingEnhancement::isSupported() {
-    std::ofstream file("/sys/devices/virtual/mdnie/mdnie/accessibility");
-    return file.good();
+    std::fstream re(kREPath, re.in | re.out);
+    return re.good();
 }
 
 // Methods from ::vendor::lineage::livedisplay::V2_0::IReadingEnhancement follow.
 Return<bool> ReadingEnhancement::isEnabled() {
-    std::ifstream file("/sys/devices/virtual/mdnie/mdnie/accessibility");
-    std::string line;
+    std::string contents;
 
-    if (file.is_open()) {
-        file >> line;
+    if (ReadFileToString(kREPath, &contents)) {
+        contents = Trim(contents);
     }
 
-    return !line.compare("Current accessibility : DSI0 : GRAYSCALE ");
+    return !contents.compare("Current accessibility : DSI0 : GRAYSCALE ") || !contents.compare("4");
 }
 
 Return<bool> ReadingEnhancement::setEnabled(bool enabled) {
-    std::ofstream file("/sys/devices/virtual/mdnie/mdnie/accessibility");
-    if (file.is_open()) {
-        file << (enabled ? "4" : "0");
-    }
-
-    return true;
+    return WriteStringToFile(enabled ? "4" : "0", kREPath, true);
 }
 
 

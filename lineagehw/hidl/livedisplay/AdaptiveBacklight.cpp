@@ -14,9 +14,16 @@
  * limitations under the License.
  */
 
+#include <android-base/file.h>
+#include <android-base/strings.h>
+
 #include <fstream>
 
 #include "AdaptiveBacklight.h"
+
+using android::base::ReadFileToString;
+using android::base::Trim;
+using android::base::WriteStringToFile;
 
 namespace vendor {
 namespace lineage {
@@ -24,25 +31,27 @@ namespace livedisplay {
 namespace V2_0 {
 namespace samsung {
 
+static constexpr const char *kBacklightPath = "/sys/class/lcd/panel/power_reduce";
+
 bool AdaptiveBacklight::isSupported() {
-    std::ofstream file("/sys/class/lcd/panel/power_reduce");
-    return file.good();
+    std::fstream backlight(kBacklightPath, backlight.in | backlight.out);
+    return backlight.good();
 }
 
 // Methods from ::vendor::lineage::livedisplay::V2_0::IAdaptiveBacklight follow.
 Return<bool> AdaptiveBacklight::isEnabled() {
-    std::ifstream file("/sys/class/lcd/panel/power_reduce");
-    int value;
+    std::string tmp;
+    int32_t contents = 0;
 
-    file >> value;
+    if (ReadFileToString(kBacklightPath, &tmp)) {
+        contents = std::stoi(Trim(tmp));
+    }
 
-    return !file.fail() && value == 1;
+    return contents > 0;
 }
 
 Return<bool> AdaptiveBacklight::setEnabled(bool enabled) {
-    std::ofstream file("/sys/class/lcd/panel/power_reduce");
-    file << (enabled ? "1" : "0");
-    return true;
+    return WriteStringToFile(enabled ? "1" : "0", kBacklightPath, true);
 }
 
 }  // namespace samsung
